@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- template for our snippet -->
+    <template id="feature_fashion" name="Feature Fashion - Dynamic">
+        <section class="feature-fashion">
+            <div class="container">
+                <div class="text-center py-5">
+                    <h2 class="h1">Featured Fashion Products</h2>
+                    <p>Add here your Featured fashion products</p>
+                </div>
+
+                <!-- element to store list of cities using JS -->
+                <div class="row justify-content-center" id="yh-cities-row"/>
+            </div>
+        </section>
+    </template>
+
+</odoo>
