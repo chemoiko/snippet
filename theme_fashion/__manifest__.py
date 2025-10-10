@@ -12,6 +12,11 @@
         "views/snippets/feature_fashion.xml",
         "views/snippets/snippets.xml",
     ],
+    "assets": {
+        "web.assets_frontend": [
+            "theme_fashion/static/src/js/featured_fashion.js",
+        ],
+    },
     "images": [],
     "license": "LGPL-3",
 }

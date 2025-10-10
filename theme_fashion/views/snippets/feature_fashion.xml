@@ -10,7 +10,7 @@
                 </div>
 
                 <!-- element to store list of cities using JS -->
-                <div class="row justify-content-center" id="yh-cities-row"/>
+                <div class="row justify-content-center" id="fashion-products-row"/>
             </div>
         </section>
     </template>
