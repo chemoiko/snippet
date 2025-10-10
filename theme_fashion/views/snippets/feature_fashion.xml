@@ -6,7 +6,7 @@
             <div class="container">
                 <div class="text-center py-5">
                     <h2 class="h1">Featured Fashion Products</h2>
-                    <p>Add here your Featured fashion products</p>
+                    <p>View Featured fashion products</p>
                 </div>
 
                 <!-- element to store list of cities using JS -->

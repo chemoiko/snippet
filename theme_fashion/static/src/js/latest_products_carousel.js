@@ -31,7 +31,6 @@ PublicWidget.registry.latest_products_carousel = PublicWidget.Widget.extend({
                     <img class="rounded" style="width:320px;height:220px;object-fit:cover;" src="data:image/png;base64,${product.image_512 || ''}"/>
                     <div class="ms-3">
                         <h5 class="mb-0">${product.name}</h5>
-                        <div class="text-muted">Seq: ${product.website_sequence}</div>
                     </div>
                 </div>
             </div>`;

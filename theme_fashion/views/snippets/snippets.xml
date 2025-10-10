@@ -1,12 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <odoo>
-    <template id="custom_snippets" inherit_id="website.snippets" name="Featured fashion products">
-        <xpath expr="//snippets[@id='snippet_groups']" position="inside">
-
-            <t t-snippet="theme_fashion.feature_fashion">
-            </t>
-        </xpath>
-    </template>
 
 
     <template id="trusted_brands_snippet_registration" inherit_id="website.snippets" name="Trusted Brands Static Snippet">
