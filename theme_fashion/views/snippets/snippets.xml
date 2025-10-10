@@ -15,7 +15,7 @@
         </xpath>
     </template>
 
-    <template id="latest_products_snippet" name="Latest Products Carousel">
+    <template id="latest_products_snippet" name="Latest Products Carousel Dynamic">
         <section class="latest-products-carousel">
             <div class="container">
                 <div class="text-center py-5">
@@ -27,7 +27,7 @@
         </section>
     </template>
 
-    <template id="categories_snippet" name="Categories Snippet">
+    <template id="categories_snippet" name="Categories Snippet Dynamic">
         <section class="categories-snippet">
             <div class="container">
                 <div class="text-center py-5">
