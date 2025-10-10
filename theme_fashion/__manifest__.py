@@ -7,7 +7,7 @@
     "category": "Theme",
     "sequence": 1000,
     "version": "1.0",
-    "depends": ["website"],
+    "depends": ["website", "website_sale"],
     "data": [
         "views/snippets/trusted_brands_initializer.xml",
         "views/snippets/feature_fashion.xml",
