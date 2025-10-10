@@ -21,7 +21,7 @@ class FeaturedFashion(http.Controller):
     @http.route("/latest_products/", auth="public", type="json", methods=["POST"])
     def latest_products(self, **kwargs):
         products = http.request.env["product.template"].search_read(
-            [],
+            [("is_published", "=", True)],
             ["name", "image_512", "website_url", "website_sequence"],
             order="create_date desc",
             limit=4,
