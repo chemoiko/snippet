@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_purchase_rfq_vendor_user,purchase.rfq.vendor,model_purchase_rfq_vendor,base.group_user,1,1,1,1
+access_purchase_rfq_bid_user,purchase.rfq.bid,model_purchase_rfq_bid,base.group_user,1,1,1,1

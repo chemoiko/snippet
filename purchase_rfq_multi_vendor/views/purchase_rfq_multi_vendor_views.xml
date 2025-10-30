@@ -1,0 +1,84 @@
+<odoo>
+
+    <!-- 
+        This view extends the standard purchase order form to add a new "Vendors" and "Bids" tabs.
+        Also makes the primary vendor field optional for RFQs.
+    -->
+    <record id="purchase_order_form_inherited" model="ir.ui.view">
+        <field name="name">purchase_order_form_customized</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form" />
+        <field name="priority" eval="90" />
+        <field name="arch" type="xml">
+            <!-- Make the default vendor field readonly and show current primary vendor -->
+            <xpath expr="//field[@name='partner_id']" position="replace">
+                <field name="partner_id" readonly="1" string="Winning Vendor" required="0"
+                    invisible="state not in ('sent', 'purchase')" />
+            </xpath>
+
+            <!-- Add multi-vendor selection in place of default vendor -->
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="rfq_vendor_ids" string="Vendors" widget="one2many_list" nolabel="1">
+                    <list editable="bottom">
+                        <field name="partner_id" widget="many2one_list" />
+                        <field name="sequence" widget="handle" />
+                    </list>
+                </field>
+            </xpath>
+
+        </field>
+    </record>
+
+    <!-- Separate view record to insert Bids after Vendors -->
+    <record id="purchase_order_form_bids" model="ir.ui.view">
+        <field name="name">purchase.order.form.bids</field>
+    <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form" />
+        <field name="priority" eval="95" />
+    <field name="arch" type="xml">
+            <xpath expr="//page[@name='products']" position="after">
+                <page name="bids_page" string="Bids" invisible="state not in ('sent', 'purchase')">
+                    <group>
+                        <field name="bid_ids" readonly="state != 'sent'">
+            <list editable="bottom">
+                                <field name="vendor_id" />
+                                <!-- <field name="product_qty"/> -->
+                                <field name="price_total" />
+                                <field name="currency_id" />
+                                <field name="date_expected" widget="date" />
+                                <button name="action_set_won" type="object" icon="fa-check"
+                                    title="Accept" class="btn-link" invisible="state == 'won'" />
+                                <button name="action_set_lost" type="object" icon="fa-times"
+                                    title="Refuse" class="btn-link" invisible="state == 'lost'" />
+                                <field name="state" widget="badge"
+                                    decoration-success="state == 'won'"
+                                    decoration-danger="state == 'lost'" />
+            </list>
+                            <form string="Bid">
+              <group>
+                                    <field name="vendor_id" />
+                                    <!-- <field name="product_qty"/> -->
+                                    <field name="price_total" />
+                                    <field name="currency_id" />
+                                    <field name="date_expected" widget="date" />
+                                    <field name="state" widget="badge"
+                                        decoration-success="state == 'won'"
+                                        decoration-danger="state == 'lost'" />
+                                    <field name="state" />
+                                    <field name="note" />
+              </group>
+                                <footer>
+                                    <button string="Accept" type="object" name="action_set_won"
+                                        class="btn-primary" invisible="state == 'won'" />
+                                    <button string="Refuse" type="object" name="action_set_lost"
+                                        class="btn-secondary" invisible="state == 'lost'" />
+                                </footer>
+            </form>
+          </field>
+                    </group>
+        </page>
+      </xpath>
+    </field>
+  </record>
+
+</odoo>
