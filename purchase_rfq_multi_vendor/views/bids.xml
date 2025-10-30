@@ -1,0 +1,29 @@
+<!-- views/purchase_rfq_bid_views.xml -->
+<odoo>
+
+    <!-- Dedicated list view for bids -->
+    <record id="view_purchase_rfq_bid_tree" model="ir.ui.view">
+        <field name="name">purchase.rfq.bid.tree</field>
+        <field name="model">purchase.rfq.bid</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="vendor_id"/>
+                <field name="price_total"/>
+                <field name="currency_id"/>
+                <field name="date_expected"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Action used by the smart button; opens list view filtered to this RFQ -->
+    <record id="action_view_rfq_bids" model="ir.actions.act_window">
+        <field name="name">Bids</field>
+        <field name="res_model">purchase.rfq.bid</field>
+        <field name="view_mode">tree,form,kanban</field>
+        <field name="view_id" ref="view_purchase_rfq_bid_tree"/>
+        <field name="domain">[('rfq_id', '=', active_id)]</field>
+        <field name="context">{'default_rfq_id': active_id}</field>
+    </record>
+
+</odoo>
