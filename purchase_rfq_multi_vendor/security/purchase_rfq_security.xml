@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Category -->
+        <record id="module_category_rfq_management" model="ir.module.category">
+            <field name="name">RFQ Management</field>
+            <field name="description">Manage RFQ submissions and approvals</field>
+            <field name="sequence">10</field>
+        </record>
+
+        <!-- Group 1: Bid Officer -->
+        <record id="group_bid_officer" model="res.groups">
+            <field name="name">Bid Officer</field>
+            <field name="category_id" ref="module_category_rfq_management"/>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <field name="comment">Can create and submit bids for review</field>
+        </record>
+
+        <!-- Group 2: Bid Administrator -->
+        <record id="group_bid_admin" model="res.groups">
+            <field name="name">Bid Administrator</field>
+            <field name="category_id" ref="module_category_rfq_management"/>
+            <field name="implied_ids" eval="[(4, ref('group_bid_officer')), (4, ref('base.group_system'))]"/>
+            <field name="comment">Can review and approve bids. Has full system access.</field>
+        </record>
+    </data>
+</odoo>

@@ -7,6 +7,7 @@
     "license": "LGPL-3",
     "depends": ["purchase", "base"],
     "data": [
+        "security/purchase_rfq_security.xml",
         "security/ir.model.access.csv",
         "views/bids.xml",
         "views/purchase_rfq_multi_vendor_views.xml",

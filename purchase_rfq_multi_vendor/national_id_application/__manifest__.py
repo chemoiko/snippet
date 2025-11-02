@@ -1,0 +1,22 @@
+{
+    "name": "National ID Application",
+    "summary": "Capture and manage applications for national ID",
+    "version": "1.0",
+    "author": "eli",
+    "license": "LGPL-3",
+    "depends": ["base", "website", "mail"],
+    "data": [
+        "security/security.xml",
+        "security/ir.model.access.csv",
+        "security/ir_rule.xml",
+        "data/sequences.xml",
+        "views/national_id_application_views.xml",
+        "views/national_id_stage_menus.xml",
+        "views/national_id_form_template.xml",
+        "data/application_ack_email_template.xml",
+        "data/stage_email_templates.xml",
+    ],
+    "installable": True,
+    "application": True,
+    "category": "national id application",
+}

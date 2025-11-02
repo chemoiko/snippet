@@ -1,0 +1,7 @@
+
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_national_id_public,national.id.public,model_national_id_application,base.group_public,0,0,1,0
+access_national_id_verification,national.id.verification,model_national_id_application,national_id_application.group_verification_user,1,1,0,0
+access_national_id_senior,national.id.senior,model_national_id_application,national_id_application.group_senior_user,1,1,0,0
+access_national_id_final,national.id.final,model_national_id_application,national_id_application.group_final_user,1,1,1,0
+access_national_id_admin,national.id.admin,model_national_id_application,base.group_system,1,1,1,1

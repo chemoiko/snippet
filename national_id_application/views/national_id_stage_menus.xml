@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Actions for each stage -->
+        
+        <!-- To Verify Queue -->
+        <record id="action_national_id_to_verify" model="ir.actions.act_window">
+            <field name="name">To Verify</field>
+            <field name="res_model">national.id.application</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('state', '=', 'draft')]</field>
+            <field name="context">{'search_default_state': 'draft'}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No applications to verify!
+                </p>
+                <p>
+                    Applications that need verification will appear here.
+                </p>
+            </field>
+        </record>
+
+        <!-- To Senior Approve Queue -->
+        <record id="action_national_id_to_senior_approve" model="ir.actions.act_window">
+            <field name="name">To Senior Approve</field>
+            <field name="res_model">national.id.application</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('state', '=', 'verified')]</field>
+            <field name="context">{'search_default_state': 'verified'}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No applications for senior approval!
+                </p>
+                <p>
+                    Verified applications ready for senior approval will appear here.
+                </p>
+            </field>
+        </record>
+
+        <!-- To Final Approve Queue -->
+        <record id="action_national_id_to_final_approve" model="ir.actions.act_window">
+            <field name="name">To Final Approve</field>
+            <field name="res_model">national.id.application</field>
+            <field name="view_mode">tree,form</field>
+            <field name="domain">[('state', '=', 'senior_approved')]</field>
+            <field name="context">{'search_default_state': 'senior_approved'}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No applications for final approval!
+                </p>
+                <p>
+                    Senior approved applications ready for final approval will appear here.
+                </p>
+            </field>
+        </record>
+
+        <!-- All Applications -->
+        <record id="action_national_id_all_applications" model="ir.actions.act_window">
+            <field name="name">All Applications</field>
+            <field name="res_model">national.id.application</field>
+            <field name="view_mode">tree,form,kanban</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No applications found!
+                </p>
+                <p>
+                    All National ID applications will be listed here.
+                </p>
+            </field>
+        </record>
+
+        <!-- Menu Items -->
+        <menuitem id="menu_national_id_root" 
+                  name="National ID Applications" 
+                  sequence="10"/>
+
+        <!-- Verification User Menu -->
+        <menuitem id="menu_national_id_to_verify" 
+                  name="To Verify" 
+                  parent="menu_national_id_root" 
+                  action="action_national_id_to_verify" 
+                  sequence="10"
+                  groups="national_id_application.group_verification_user"/>
+
+        <!-- Senior User Menu -->
+        <menuitem id="menu_national_id_to_senior_approve" 
+                  name="To Senior Approve" 
+                  parent="menu_national_id_root" 
+                  action="action_national_id_to_senior_approve" 
+                  sequence="20"
+                  groups="national_id_application.group_senior_user"/>
+
+        <!-- Final User Menu -->
+        <menuitem id="menu_national_id_to_final_approve" 
+                  name="To Final Approve" 
+                  parent="menu_national_id_root" 
+                  action="action_national_id_to_final_approve" 
+                  sequence="30"
+                  groups="national_id_application.group_final_user"/>
+
+        <!-- All Applications Menu -->
+        <menuitem id="menu_national_id_all_applications" 
+                  name="All Applications" 
+                  parent="menu_national_id_root" 
+                  action="action_national_id_all_applications" 
+                  sequence="40"/>
+
+        <!-- Dashboard Menu for Managers -->
+        <menuitem id="menu_national_id_dashboard" 
+                  name="Dashboard" 
+                  parent="menu_national_id_root" 
+                  action="action_national_id_all_applications" 
+                  sequence="5"
+                  groups="national_id_application.group_final_user"/>
+    </data>
+</odoo>
+

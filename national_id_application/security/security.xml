@@ -1,0 +1,33 @@
+<!--
+National ID Application Security Configuration
+
+Defines user groups and access rules for the 3-stage approval workflow:
+- Verification User: Can verify applications (draft → verified)
+- Senior User: Can approve verified applications (verified → senior_approved)  
+- Final User: Can give final approval (senior_approved → final_approved)
+
+Groups are hierarchical - higher levels inherit lower level permissions.
+-->
+
+<odoo>
+    <!-- User Groups for 3-Stage Approval Workflow -->
+
+    <!-- Level 1: Verification Users -->
+    <record id="group_verification_user" model="res.groups">
+        <field name="name">Verification User</field>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]" />
+    </record>
+
+    <!-- Level 2: Senior Users (inherits verification permissions) -->
+    <record id="group_senior_user" model="res.groups">
+        <field name="name">Senior User</field>
+        <field name="implied_ids"
+            eval="[(4, ref('national_id_application.group_verification_user'))]" />
+    </record>
+
+    <!-- Level 3: Final Users (inherits senior + verification permissions) -->
+    <record id="group_final_user" model="res.groups">
+        <field name="name">Final approver</field>
+        <field name="implied_ids" eval="[(4, ref('national_id_application.group_senior_user'))]" />
+    </record>
+</odoo>

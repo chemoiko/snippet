@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models  # pyright: ignore[reportMissingImports]
 from odoo.exceptions import ValidationError
 
 
@@ -103,6 +103,18 @@ class PurchaseRfqBid(models.Model):
         required=True,
         domain=[("supplier_rank", ">=", 0)],
     )
+    bid_date = fields.Datetime(string="Bid Date", default=fields.Datetime.now)
+    bid_deadline = fields.Datetime(string="Bid Deadline")
+    rfq_line_id = fields.Many2one(
+        "purchase.order.line", string="RFQ Line", domain="[('order_id', '=', rfq_id)]"
+    )
+    product_id = fields.Many2one(
+        "product.product",
+        string="Product",
+        related="rfq_line_id.product_id",
+        store=True,
+        readonly=True,
+    )
     product_qty = fields.Float(string="Quantity", default=1.0)
     price_total = fields.Monetary(string="Offer")
     price_unit = fields.Float(string="Unit Price")  # <-- add this
@@ -117,12 +129,24 @@ class PurchaseRfqBid(models.Model):
     state = fields.Selection(
         [
             ("draft", "Draft"),
-            ("submitted", "Submitted"),
+            ("review", "Review"),
+            ("approved", "Approved"),
+            ("rejected", "Rejected"),
             ("won", "Won"),
             ("lost", "Lost"),
         ],
         default="draft",
+        tracking=True,
         string="Status",
+    )
+
+    # Notes
+    officer_notes = fields.Text(string="Officer Notes", help="Notes from bid officer")
+
+    admin_notes = fields.Text(
+        string="Admin Notes",
+        help="Admin review feedback and approval notes",
+        groups="purchase_rfq_multi_vendor.group_bid_admin",
     )
 
     _sql_constraints = [
@@ -200,3 +224,33 @@ class PurchaseRfqBid(models.Model):
         for bid in self:
             if bid.state != "lost":
                 bid.write({"state": "lost"})
+
+    def action_submit_review(self):
+        """Submit bid for review (draft -> review)"""
+        for bid in self:
+            if bid.state != "draft":
+                raise ValidationError("Only draft bids can be submitted for review.")
+            bid.write({"state": "review"})
+
+    def action_approve(self):
+        """Approve bid (review -> approved)"""
+        for bid in self:
+            if bid.state != "review":
+                raise ValidationError("Only bids in review state can be approved.")
+            bid.write({"state": "approved"})
+
+    def action_reject(self):
+        """Reject bid (review -> rejected)"""
+        for bid in self:
+            if bid.state != "review":
+                raise ValidationError("Only bids in review state can be rejected.")
+            bid.write({"state": "rejected"})
+
+    def action_reset_to_draft(self):
+        """Reset bid to draft state (approved/rejected -> draft)"""
+        for bid in self:
+            if bid.state not in ("approved", "rejected"):
+                raise ValidationError(
+                    "Only approved or rejected bids can be reset to draft."
+                )
+            bid.write({"state": "draft"})

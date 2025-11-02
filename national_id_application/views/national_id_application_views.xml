@@ -1,0 +1,198 @@
+<!--
+National ID Application Views
+
+Defines the user interface for the National ID application management system.
+Includes form view, list view, and search view with role-based button visibility.
+-->
+
+<odoo>
+    <!-- Form View: Detailed application form with 3-stage approval workflow -->
+    <record id="view_national_id_form" model="ir.ui.view">
+        <field name="name">national.id.application.form</field>
+        <field name="model">national.id.application</field>
+        <field name="arch" type="xml">
+            <form string="National ID Application">
+                <header>
+                    <!-- Workflow Action Buttons -->
+
+                    <!-- Stage 1: Verification (draft → verified) -->
+                    <button name="action_verify" string="Verify" type="object"
+                        class="oe_highlight"
+                        groups="national_id_application.group_verification_user"
+                        invisible="state != 'draft'" />
+
+                    <!-- Stage 2: Senior Approval (verified → senior_approved) -->
+                    <button name="action_senior_approve" string="Senior Approve" type="object"
+                        class="oe_highlight"
+                        groups="national_id_application.group_senior_user"
+                        invisible="state != 'verified'" />
+
+                    <!-- Stage 3: Final Approval (senior_approved → final_approved) -->
+                    <button name="action_final_approve" string="Final Approve" type="object"
+                        class="oe_highlight"
+                        groups="national_id_application.group_final_user"
+                        invisible="state != 'senior_approved'" />
+
+                    <!-- Reject Buttons (available at different stages) -->
+                    <button name="action_reject" string="Reject" type="object"
+                        class="btn-secondary"
+                        groups="national_id_application.group_verification_user"
+                        invisible="state != 'verified'" />
+                    <button name="action_reject" string="Reject" type="object"
+                        class="btn-secondary"
+                        groups="national_id_application.group_senior_user"
+                        invisible="state != 'senior_approved'" />
+                    <button name="action_reject" string="Reject" type="object"
+                        class="btn-secondary"
+                        groups="national_id_application.group_final_user"
+                        invisible="state != 'final_approved'" />
+
+                    <!-- Status Bar showing workflow progress -->
+                    <field name="state"
+                        widget="statusbar"
+                        statusbar_visible="draft,verified,senior_approved,final_approved,rejected" />
+                </header>
+                <sheet>
+                    <!-- Applicant photo displayed as avatar -->
+                    <field name="photo" widget="image" class="oe_avatar" nolabel="1"
+                        options="{'zoom': true}" />
+
+                    <!-- Application title and tracking number -->
+                    <div class="oe_title">
+                        <span class="o_form_label">National ID Application </span>
+                    </div>
+                    <h1>
+                        <field name="tracking_number" class="oe_inline" />
+                    </h1>
+                    <!-- Basic applicant information (readonly after creation) -->
+                    <group>
+                        <group>
+                            <field name="name" readonly="id" />
+                            <field name="dob" readonly="id" />
+                            <field name="gender" readonly="id" />
+                            <field name="address" readonly="id" />
+                            <field name="phone" readonly="id" />
+                            <field name="application_date" readonly="1" />
+                            <field name="email" readonly="id" />
+                            <field name="marital_status" readonly="id" />
+                        </group>
+                        <group>
+                            <field name="next_of_kin" readonly="id" />
+                            <field name="next_of_kin_phone" readonly="id" />
+                        </group>
+                    </group>
+
+                    <!-- pages -->
+                    <notebook>
+                        <page string="Verification">
+
+                            <group string="Documents">
+                                <button name="action_view_photo" string="View Support Photo"
+                                    type="object"
+                                    class="btn-secondary"
+                                />
+
+                                <button name="action_view_lc_letter" string="View Letter of Consent"
+                                    type="object"
+                                    class="btn-secondary"
+                                />
+                            </group>
+                            <group string="Document Checks">
+                                <field name="photo_quality" readonly="fields_readonly" />
+                                <field name="lc_present" readonly="fields_readonly" />
+                                <field name="lc_valid" readonly="fields_readonly" />
+                            </group>
+
+                            <group string="Identity Checks">
+                                <field name="name_match" readonly="fields_readonly" />
+                                <field name="address_match" readonly="fields_readonly" />
+                            </group>
+
+                        </page>
+                        <page string="Documents">
+                            <group colspan="4">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <field name="photo" widget="image"
+                                            options="{'zoom': true, 'preview_image': 'photo', 'size': [400, 400]}"
+                                            nolabel="1" string="Support Photo" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <field name="lc_letter" widget="binary"
+                                            options="{'accepted_file_extensions': '.pdf,.jpg,.jpeg,.png'}"
+                                            nolabel="1" string="LC Letter" />
+                                        <br />
+                                        <button name="action_view_lc_letter"
+                                            string="View Full Document"
+                                            type="object" class="btn btn-primary btn-sm"
+                                            invisible="not lc_letter" />
+                                    </div>
+                                </div>
+                            </group>
+                        </page>
+
+                        <page string="Notes">
+                            <group>
+                                <field name="verification_notes" colspan="2" string="Verifier Notes"
+                                    invisible="state not in ['draft', 'verified', 'senior_approved', 'final_approved']"
+                                    readonly="state in ['verified', 'senior_approved', 'final_approved', 'rejected']" />
+                                <field name="senior_approver_notes" colspan="2"
+                                    invisible="state not in ['verified', 'senior_approved', 'final_approved']"
+                                    readonly="state in ['senior_approved', 'final_approved', 'rejected']" />
+                                <field name="final_approver_notes" colspan="2"
+                                    invisible="state not in ['senior_approved', 'final_approved']"
+                                    readonly="state in ['final_approved', 'rejected']" />
+                            </group>
+                        </page>
+
+
+                    </notebook>
+                </sheet>
+                <chatter />
+
+            </form>
+        </field>
+    </record>
+
+    <!-- List View: Applications overview with color-coded status -->
+    <record id="view_national_id_tree" model="ir.ui.view">
+        <field name="name">national.id.application.tree</field>
+        <field name="model">national.id.application</field>
+        <field name="arch" type="xml">
+            <list string="National ID Applications"
+                decoration-muted="state == 'draft'"
+                decoration-info="state == 'verified'"
+                decoration-warning="state == 'senior_approved'"
+                decoration-success="state == 'final_approved'"
+                decoration-danger="state == 'rejected'">
+                <field name="tracking_number" />
+                <field name="application_date" />
+                <field name="name" />
+                <field name="email" />
+                <!-- Status badge with color coding -->
+                <field name="state" widget="badge"
+                    decoration-muted="state == 'draft'"
+                    decoration-info="state == 'verified'"
+                    decoration-warning="state == 'senior_approved'"
+                    decoration-success="state == 'final_approved'"
+                    decoration-danger="state == 'rejected'" />
+            </list>
+        </field>
+    </record>
+
+    <!-- Action: Main menu item for National ID Applications -->
+    <record id="action_national_id_application" model="ir.actions.act_window">
+        <field name="name">National ID Applications</field>
+        <field name="res_model">national.id.application</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_nid_root" name="National ID" sequence="10" />
+
+    <menuitem id="menu_nid_applications"
+        name="Applications"
+        parent="menu_nid_root"
+        action="action_national_id_application"
+        sequence="10" />
+
+</odoo>

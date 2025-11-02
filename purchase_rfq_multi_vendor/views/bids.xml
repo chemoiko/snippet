@@ -8,6 +8,9 @@
         <field name="arch" type="xml">
             <list>
                 <field name="vendor_id"/>
+                <field name="bid_date"/>
+                <field name="bid_deadline"/>
+                <field name="product_id"/>
                 <field name="price_total"/>
                 <field name="currency_id"/>
                 <field name="date_expected"/>
@@ -20,10 +23,74 @@
     <record id="action_view_rfq_bids" model="ir.actions.act_window">
         <field name="name">Bids</field>
         <field name="res_model">purchase.rfq.bid</field>
-        <field name="view_mode">tree,form,kanban</field>
+        <field name="view_mode">list,form,kanban</field>
         <field name="view_id" ref="view_purchase_rfq_bid_tree"/>
         <field name="domain">[('rfq_id', '=', active_id)]</field>
         <field name="context">{'default_rfq_id': active_id}</field>
+    </record>
+
+    <!-- Dedicated form view for bids with tabs -->
+    <record id="view_purchase_rfq_bid_form" model="ir.ui.view">
+        <field name="name">purchase.rfq.bid.form</field>
+        <field name="model">purchase.rfq.bid</field>
+        <field name="arch" type="xml">
+            <form string="Bid">
+
+                <header>
+                    <!-- Statusbar -->
+                    <field name="state" widget="statusbar" statusbar_visible="draft,review,approved,rejected"/>
+
+                    <!-- Submit Button (Bid Officer, Draft state) -->
+                    <button name="action_submit_review" string="Submit for Review" type="object" class="btn-primary" invisible="state != 'draft'" confirm="Are you sure you want to submit this bid for review?"/>
+
+                    <!-- Approve Button (Admin, Review state) -->
+                    <button name="action_approve" string="Approve" type="object" groups="purchase_rfq_multi_vendor.group_bid_admin" class="btn-success" invisible="state != 'review'" confirm="Are you sure you want to approve this bid?"/>
+
+                    <!-- Reject Button (Admin, Review state) -->
+                    <button name="action_reject" string="Reject" type="object" groups="purchase_rfq_multi_vendor.group_bid_admin" class="btn-danger" invisible="state != 'review'"/>
+
+                    <!-- Reset to Draft (Admin, Approved or Rejected states) -->
+                    <button name="action_reset_to_draft" string="Reset to Draft" type="object" groups="purchase_rfq_multi_vendor.group_bid_admin" class="btn-warning" invisible="state != 'approved' and state != 'rejected'" confirm="Are you sure you want to reset this bid to draft?"/>
+                </header>
+
+                <sheet>
+                    <group>
+                        <field name="rfq_id" readonly="1"/>
+                        <field name="vendor_id"/>
+                        <field name="state" widget="badge" decoration-success="state == 'won'" decoration-danger="state == 'lost'"/>
+                    </group>
+                    <group>
+                        <field name="bid_date"/>
+                        <field name="bid_deadline"/>
+                    </group>
+                    <group>
+                        <field name="price_unit"/>
+                        <field name="product_qty"/>
+                        <field name="price_total"/>
+                        <field name="currency_id"/>
+                        <field name="date_expected"/>
+                    </group>
+
+                    <notebook>
+                        <page string="Products">
+                            <group>
+                                <field name="rfq_line_id"/>
+                                <field name="product_id" readonly="1"/>
+                            </group>
+                        </page>
+                        <page string="Notes ">
+                            <!-- Officer Notes -->
+                            <separator string="Officer Notes"/>
+                            <field name="officer_notes" nolabel="1" placeholder="Add your preparation notes..."/>
+
+                            <!-- Admin Notes (Admin only) -->
+                            <separator string="Admin Notes" groups="purchase_rfq_multi_vendor.group_bid_admin"/>
+                            <field name="admin_notes" nolabel="1" groups="purchase_rfq_multi_vendor.group_bid_admin" placeholder="Add review feedback..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
     </record>
 
 </odoo>

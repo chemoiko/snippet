@@ -1,0 +1,49 @@
+<odoo><data>
+    
+        <record id="template_verification_done" model="mail.template">
+            <field name="name">National ID - Verification Completed</field>
+            <field name="model_id" ref="national_id_application.model_national_id_application" />
+            <field name="email_to">{{object.email}}</field>
+            <field name="subject">Your National ID application moved through Verification</field>
+            <field name="body_html" type="html">
+              
+                    <div>
+                    <p>Dear <t t-out="object.name"/></p>
+                        <p>Your application (Tracking: <strong><t t-out="object.tracking_number"/></strong>) has passed the verification stage.</p>
+                        <p>Next step: Senior approval.</p>
+                    </div>
+                
+            </field>
+        </record>
+    
+        <record id="template_senior_done" model="mail.template">
+            <field name="name">National ID - Senior Approval Completed</field>
+            <field name="model_id" ref="national_id_application.model_national_id_application" />
+            <field name="email_to">{{object.email}}</field>
+            <field name="subject">Your National ID application moved through Senior Approval</field>
+            <field name="body_html" type="html">
+              
+                    <div>
+                        <p>Dear <t t-out="object.name"/></p>
+                        <p>Your application (Tracking: <strong><t t-out="object.tracking_number"/></strong>) was approved by Senior review.</p>
+                        <p>Next step: Final approval.</p>
+                    </div>
+             
+            </field>
+        </record>
+    
+        <record id="template_final_done" model="mail.template">
+            <field name="name">National ID - Final Approval Completed</field>
+            <field name="model_id" ref="national_id_application.model_national_id_application" />
+            <field name="email_to">{{object.email}}</field>
+            <field name="subject">Your National ID application is Final Approved</field>
+            <field name="body_html" type="html">
+                    <div>
+                        <p>Dear <t t-out="object.name"/>,</p>
+                        <p>Your application (Tracking: <strong><t t-out="object.tracking_number"/></strong>) has received final approval.</p>
+                        <p>We will contact you with the next instructions.</p>
+                    </div>
+            </field>
+        </record>
+</data>
+</odoo>
