@@ -2,3 +2,8 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_purchase_rfq_vendor_user,purchase.rfq.vendor,model_purchase_rfq_vendor,group_bid_officer,1,1,1,1
 access_purchase_rfq_bid_officer,Bid Officer Access,model_purchase_rfq_bid,group_bid_officer,1,1,1,0
 access_purchase_rfq_bid_admin,Bid Admin Access,model_purchase_rfq_bid,group_bid_admin,1,1,1,1
+
+
+
+access_purchase_rfq_bid_line_officer,Bid Line Officer Access,model_purchase_rfq_bid_line,group_bid_officer,1,1,1,1
+access_purchase_rfq_bid_line_admin,Bid Line Admin Access,model_purchase_rfq_bid_line,group_bid_admin,1,1,1,1

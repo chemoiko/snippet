@@ -1,5 +1,5 @@
 from odoo import api, fields, models  # pyright: ignore[reportMissingImports]
-from odoo.exceptions import ValidationError
+from odoo.exceptions import ValidationError  # pyright: ignore[reportMissingImports]
 
 
 class PurchaseOrder(models.Model):
@@ -17,7 +17,14 @@ class PurchaseOrder(models.Model):
         help="You can find a vendor by its Name, TIN, Email or Internal Reference.",
     )
 
-    rfq_vendor_ids = fields.One2many("purchase.rfq.vendor", "rfq_id", string="Vendors")
+    rfq_vendor_ids = fields.Many2many(
+        "res.partner",
+        "purchase_rfq_vendor_rel",
+        "rfq_id",
+        "partner_id",
+        domain=[("supplier_rank", ">=", 0)],
+    )
+    bid_deadline = fields.Datetime(string="Bid Deadline")
     bid_ids = fields.One2many("purchase.rfq.bid", "rfq_id", string="Bids")
     bid_count = fields.Integer(string="Bid Count", compute="_compute_bid_count")
 
@@ -36,7 +43,7 @@ class PurchaseOrder(models.Model):
                         "Cannot confirm RFQ without any vendors. Please add vendors first."
                     )
                 # Auto-select the first vendor as primary if none selected
-                order.partner_id = order.rfq_vendor_ids[0].partner_id
+                order.partner_id = order.rfq_vendor_ids[0]
 
         res = super().button_confirm()
 
@@ -44,11 +51,9 @@ class PurchaseOrder(models.Model):
         for order in self:
             winner = order.partner_id
             if winner and order.rfq_vendor_ids:
-                others = order.rfq_vendor_ids.filtered(
-                    lambda v: v.partner_id.id != winner.id
-                )
+                others = order.rfq_vendor_ids.filtered(lambda v: v.id != winner.id)
                 if others:
-                    others.unlink()
+                    order.rfq_vendor_ids = [(3, partner.id) for partner in others]
         return res
 
     @api.constrains("partner_id", "rfq_vendor_ids", "state")
@@ -93,6 +98,10 @@ class PurchaseRfqVendor(models.Model):
 class PurchaseRfqBid(models.Model):
     _name = "purchase.rfq.bid"
     _description = "RFQ Bid"
+    # Human-friendly index like BID0001 (not stored, based on record id)
+    bid_index = fields.Char(
+        string="Bid Index", compute="_compute_bid_index", store=False
+    )
 
     rfq_id = fields.Many2one(
         "purchase.order", string="RFQ", required=True, ondelete="cascade"
@@ -105,6 +114,25 @@ class PurchaseRfqBid(models.Model):
     )
     bid_date = fields.Datetime(string="Bid Date", default=fields.Datetime.now)
     bid_deadline = fields.Datetime(string="Bid Deadline")
+    promised_delivery_date = fields.Datetime(string="Promised Delivery Date")
+    company_id = fields.Many2one(
+        "res.company",
+        string="Company",
+        related="rfq_id.company_id",
+        store=True,
+        readonly=True,
+    )
+    is_winner = fields.Boolean(
+        string="Selected as Winner", compute="_compute_is_winner", store=True
+    )
+
+    # One bid can cover one or more products (lines)
+    line_ids = fields.One2many(
+        "purchase.rfq.bid.line",
+        "rfq_bid_id",
+        string="Bid Lines",
+    )
+
     rfq_line_id = fields.Many2one(
         "purchase.order.line", string="RFQ Line", domain="[('order_id', '=', rfq_id)]"
     )
@@ -115,9 +143,15 @@ class PurchaseRfqBid(models.Model):
         store=True,
         readonly=True,
     )
+    product_description = fields.Text(
+        string="Description",
+        related="rfq_line_id.name",
+        store=True,
+        readonly=True,
+    )
     product_qty = fields.Float(string="Quantity", default=1.0)
     price_total = fields.Monetary(string="Offer")
-    price_unit = fields.Float(string="Unit Price")  # <-- add this
+    price_unit = fields.Float(string="Unit Price")
     date_expected = fields.Date(string="Expected Arrival")
     currency_id = fields.Many2one(
         "res.currency",
@@ -157,6 +191,15 @@ class PurchaseRfqBid(models.Model):
         )
     ]
 
+    @api.depends("state")
+    def _compute_is_winner(self):
+        for bid in self:
+            bid.is_winner = bid.state == "won"
+
+    def _compute_bid_index(self):
+        for rec in self:
+            rec.bid_index = f"BID{rec.id:04d}" if rec.id else "BID"
+
     # price_total is manually editable; no compute
 
     def _apply_won_side_effects(self):
@@ -166,17 +209,11 @@ class PurchaseRfqBid(models.Model):
                 continue
             other_bids = bid.rfq_id.bid_ids.filtered(lambda b: b.id != bid.id)
             if other_bids:
-                other_bids.write({"state": "lost"})
-            link_model = self.env["purchase.rfq.vendor"]
-            if not bid.rfq_id.rfq_vendor_ids.filtered(
-                lambda v: v.partner_id.id == bid.vendor_id.id
-            ):
-                link_model.create(
-                    {
-                        "rfq_id": bid.rfq_id.id,
-                        "partner_id": bid.vendor_id.id,
-                    }
-                )
+                # When one bid wins/approved, others are rejected
+                other_bids.write({"state": "rejected"})
+            # Add vendor to RFQ vendors if not already present
+            if bid.vendor_id not in bid.rfq_id.rfq_vendor_ids:
+                bid.rfq_id.rfq_vendor_ids = [(4, bid.vendor_id.id)]
             # Set the winning vendor as the primary vendor
             bid.rfq_id.partner_id = bid.vendor_id.id
 
@@ -237,7 +274,10 @@ class PurchaseRfqBid(models.Model):
         for bid in self:
             if bid.state != "review":
                 raise ValidationError("Only bids in review state can be approved.")
+            # Set approved, then mark as won and apply side effects
             bid.write({"state": "approved"})
+            # Transition to won and trigger side effects to set vendor and reject others
+            bid.with_context(skip_won_hook=False).write({"state": "won"})
 
     def action_reject(self):
         """Reject bid (review -> rejected)"""
@@ -254,3 +294,40 @@ class PurchaseRfqBid(models.Model):
                     "Only approved or rejected bids can be reset to draft."
                 )
             bid.write({"state": "draft"})
+
+
+class PurchaseRfqBidLine(models.Model):
+    _name = "purchase.rfq.bid.line"
+    _description = "RFQ Bid Line"
+    _order = "id desc"
+
+    rfq_bid_id = fields.Many2one(
+        "purchase.rfq.bid",
+        string="Bid",
+        required=True,
+        ondelete="cascade",
+    )
+    product_id = fields.Many2one(
+        "product.product",
+        string="Product",
+        required=True,
+        domain=[("purchase_ok", "=", True)],
+    )
+    name = fields.Text(string="Description")
+    product_qty = fields.Float(string="Quantity", default=1.0)
+    price_unit = fields.Monetary(string="Unit Price")
+    price_total = fields.Monetary(
+        string="Subtotal", compute="_compute_price_total", store=True
+    )
+    date_expected = fields.Date(string="Delivery Date")
+    currency_id = fields.Many2one(
+        "res.currency",
+        string="Currency",
+        required=True,
+        default=lambda self: self.env.company.currency_id,
+    )
+
+    @api.depends("product_qty", "price_unit")
+    def _compute_price_total(self):
+        for line in self:
+            line.price_total = (line.product_qty or 0.0) * (line.price_unit or 0.0)

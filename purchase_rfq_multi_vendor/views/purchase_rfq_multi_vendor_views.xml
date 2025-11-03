@@ -15,20 +15,30 @@
                 <field name="partner_id" readonly="1" string="Winning Vendor" required="0" invisible="state not in ('sent', 'purchase')" />
             </xpath>
 
-            <!-- Add multi-vendor selection in place of default vendor -->
-            <xpath expr="//field[@name='partner_id']" position="after">
-                <field name="rfq_vendor_ids" string="Vendors" widget="one2many_list" nolabel="1">
-                    <list editable="bottom">
-                        <field name="partner_id" widget="many2one_list" />
-                        <field name="sequence" widget="handle" />
-                    </list>
-                </field>
-            </xpath>
+            <!-- Add bid deadline field in the form header before tabs -->
+            <field name="currency_id" position="after">
+                <field name="bid_deadline" />
+            </field>
 
         </field>
     </record>
 
-
+    <!-- Add Vendors tab before Products tab -->
+    <record id="purchase_order_form_vendors_tab" model="ir.ui.view">
+        <field name="name">purchase.order.form.vendors.tab</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="priority" eval="95" />
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='products']" position="before">
+                <page string="Vendors" name="vendors">
+                    <group>
+                        <field name="rfq_vendor_ids" widget="many2many_tags" nolabel="1" context="{'default_supplier_rank': 1}" options="{'no_create': False}"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
 
     <!-- smart button -->
     <record id="purchase_order_form_bids_stat_button" model="ir.ui.view">

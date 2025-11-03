@@ -2,8 +2,8 @@
 <odoo>
 
     <!-- Dedicated list view for bids -->
-    <record id="view_purchase_rfq_bid_tree" model="ir.ui.view">
-        <field name="name">purchase.rfq.bid.tree</field>
+    <record id="view_purchase_rfq_bid_list" model="ir.ui.view">
+        <field name="name">purchase.rfq.bid.list</field>
         <field name="model">purchase.rfq.bid</field>
         <field name="arch" type="xml">
             <list>
@@ -23,10 +23,42 @@
     <record id="action_view_rfq_bids" model="ir.actions.act_window">
         <field name="name">Bids</field>
         <field name="res_model">purchase.rfq.bid</field>
-        <field name="view_mode">list,form,kanban</field>
-        <field name="view_id" ref="view_purchase_rfq_bid_tree"/>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="view_id" ref="view_purchase_rfq_bid_list"/>
         <field name="domain">[('rfq_id', '=', active_id)]</field>
-        <field name="context">{'default_rfq_id': active_id}</field>
+        <field name="context">{'default_rfq_id': active_id, 'group_by': 'state'}</field>
+    </record>
+
+    <!-- Kanban view for bids (aligned with core kanban syntax) -->
+    <record id="view_purchase_rfq_bid_kanban" model="ir.ui.view">
+        <field name="name">purchase.rfq.bid.kanban</field>
+        <field name="model">purchase.rfq.bid</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_mobile" default_group_by="state" quick_create="false">
+                <field name="bid_date"/>
+                <field name="currency_id"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex align-items-baseline">
+                            <span class="fw-bolder fs-5 me-2">
+                                <t t-esc="record.bid_index and record.bid_index.value or record.display_name.value"/>
+                            </span>
+                            <field name="price_total" widget="monetary" options="{'currency_field': 'currency_id'}" class="fw-bolder ms-auto flex-shrink-0"/>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 text-muted small">
+                            <field name="vendor_id"/>
+                            <field name="bid_date" options="{'show_time': true}"/>
+                        </div>
+                        <footer class="align-items-end">
+                            <div class="d-flex flex-wrap gap-1 text-nowrap">
+                                <field name="company_id"/>
+                            </div>
+                            <field name="state" widget="label_selection" options="{'classes': {'draft':'default','review':'warning','approved':'info','rejected':'danger','won':'success','lost':'danger'}}" class="ms-auto"/>
+                        </footer>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
     </record>
 
     <!-- Dedicated form view for bids with tabs -->
@@ -54,30 +86,55 @@
                 </header>
 
                 <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="bid_index" nolabel="1"/>
+                        </h1>
+                    </div>
+                    <!-- Two-column layout matching bid form -->
                     <group>
-                        <field name="rfq_id" readonly="1"/>
-                        <field name="vendor_id"/>
-                        <field name="state" widget="badge" decoration-success="state == 'won'" decoration-danger="state == 'lost'"/>
+                        <!-- Left Column -->
+                        <group >
+                            <field name="vendor_id"/>
+                            <field name="rfq_id" readonly="1"/>
+                            <field name="bid_date" widget="datetime"/>
+                            <field name="bid_deadline" widget="datetime"/>
+                        </group>
+                        <!-- Right Column -->
+                        <group >
+                            <field name="promised_delivery_date" widget="datetime"/>
+                            <field name="price_total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="is_winner" readonly="1"/>
+                        </group>
                     </group>
-                    <group>
-                        <field name="bid_date"/>
-                        <field name="bid_deadline"/>
-                    </group>
-                    <group>
-                        <field name="price_unit"/>
-                        <field name="product_qty"/>
-                        <field name="price_total"/>
-                        <field name="currency_id"/>
-                        <field name="date_expected"/>
-                    </group>
+
 
                     <notebook>
                         <page string="Products">
-                            <group>
-                                <field name="rfq_line_id"/>
-                                <field name="product_id" readonly="1"/>
-                            </group>
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="product_qty"/>
+                                    <field name="price_unit"/>
+                                    <field name="price_total"/>
+                                    <field name="date_expected"/>
+                                    <field name="currency_id"/>
+                                </list>
+                                <form string="Bid Line">
+                                    <group>
+                                        <field name="product_id"/>
+                                        <field name="name"/>
+                                        <field name="product_qty"/>
+                                        <field name="price_unit"/>
+                                        <field name="price_total" readonly="1"/>
+                                        <field name="currency_id"/>
+                                        <field name="date_expected"/>
+                                    </group>
+                                </form>
+                            </field>
                         </page>
+
                         <page string="Notes ">
                             <!-- Officer Notes -->
                             <separator string="Officer Notes"/>
