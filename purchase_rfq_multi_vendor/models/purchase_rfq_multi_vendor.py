@@ -150,7 +150,12 @@ class PurchaseRfqBid(models.Model):
         readonly=True,
     )
     product_qty = fields.Float(string="Quantity", default=1.0)
-    price_total = fields.Monetary(string="Offer")
+    price_total = fields.Monetary(
+        string="Offer",
+        compute="_compute_bid_price_total",
+        store=True,
+        help="Sum of all bid line subtotals.",
+    )
     price_unit = fields.Float(string="Unit Price")
     date_expected = fields.Date(string="Expected Arrival")
     currency_id = fields.Many2one(
@@ -164,7 +169,6 @@ class PurchaseRfqBid(models.Model):
         [
             ("draft", "Draft"),
             ("review", "Review"),
-            ("approved", "Approved"),
             ("rejected", "Rejected"),
             ("won", "Won"),
             ("lost", "Lost"),
@@ -180,7 +184,6 @@ class PurchaseRfqBid(models.Model):
     admin_notes = fields.Text(
         string="Admin Notes",
         help="Admin review feedback and approval notes",
-        groups="purchase_rfq_multi_vendor.group_bid_admin",
     )
 
     _sql_constraints = [
@@ -200,7 +203,12 @@ class PurchaseRfqBid(models.Model):
         for rec in self:
             rec.bid_index = f"BID{rec.id:04d}" if rec.id else "BID"
 
-    # price_total is manually editable; no compute
+    @api.depends("line_ids.price_total")
+    def _compute_bid_price_total(self):
+        for bid in self:
+            bid.price_total = (
+                sum(bid.line_ids.mapped("price_total")) if bid.line_ids else 0.0
+            )
 
     def _apply_won_side_effects(self):
         # Apply side-effects of a bid being marked as won without rewriting state again
@@ -274,9 +282,7 @@ class PurchaseRfqBid(models.Model):
         for bid in self:
             if bid.state != "review":
                 raise ValidationError("Only bids in review state can be approved.")
-            # Set approved, then mark as won and apply side effects
-            bid.write({"state": "approved"})
-            # Transition to won and trigger side effects to set vendor and reject others
+            # Directly set to won and trigger side effects to set vendor and reject others
             bid.with_context(skip_won_hook=False).write({"state": "won"})
 
     def action_reject(self):
@@ -289,10 +295,8 @@ class PurchaseRfqBid(models.Model):
     def action_reset_to_draft(self):
         """Reset bid to draft state (approved/rejected -> draft)"""
         for bid in self:
-            if bid.state not in ("approved", "rejected"):
-                raise ValidationError(
-                    "Only approved or rejected bids can be reset to draft."
-                )
+            if bid.state not in ("rejected",):
+                raise ValidationError("Only rejected bids can be reset to draft.")
             bid.write({"state": "draft"})
 
 

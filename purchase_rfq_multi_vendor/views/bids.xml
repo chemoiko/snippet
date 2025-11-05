@@ -24,7 +24,7 @@
         <field name="name">Bids</field>
         <field name="res_model">purchase.rfq.bid</field>
         <field name="view_mode">kanban,list,form</field>
-        <field name="view_id" ref="view_purchase_rfq_bid_list"/>
+        <field name="view_id" ref="view_purchase_rfq_bid_kanban"/>
         <field name="domain">[('rfq_id', '=', active_id)]</field>
         <field name="context">{'default_rfq_id': active_id, 'group_by': 'state'}</field>
     </record>
@@ -34,32 +34,80 @@
         <field name="name">purchase.rfq.bid.kanban</field>
         <field name="model">purchase.rfq.bid</field>
         <field name="arch" type="xml">
-            <kanban class="o_kanban_mobile" default_group_by="state" quick_create="false">
+            <kanban class="o_kanban_mobile o_kanban_ungrouped" default_group_by="state">
+                <!-- Prefetch fields for the renderer -->
+                <field name="bid_index"/>
+                <field name="vendor_id"/>
+                <field name="rfq_id"/>
                 <field name="bid_date"/>
                 <field name="currency_id"/>
+                <field name="price_total"/>
+                <field name="state" />
+                <field name="is_winner"/>
+
                 <templates>
                     <t t-name="card">
-                        <div class="d-flex align-items-baseline">
-                            <span class="fw-bolder fs-5 me-2">
-                                <t t-esc="record.bid_index and record.bid_index.value or record.display_name.value"/>
-                            </span>
-                            <field name="price_total" widget="monetary" options="{'currency_field': 'currency_id'}" class="fw-bolder ms-auto flex-shrink-0"/>
-                        </div>
-                        <div class="d-flex flex-wrap gap-2 text-muted small">
-                            <field name="vendor_id"/>
-                            <field name="bid_date" options="{'show_time': true}"/>
-                        </div>
-                        <footer class="align-items-end">
-                            <div class="d-flex flex-wrap gap-1 text-nowrap">
-                                <field name="company_id"/>
+                        <t t-if="record">
+                            <div t-attf-class="oe_kanban_global_click card shadow-sm border-start-4 p-2 mb-2
+                            #{record.state.raw_value === 'won' ? 'border-success' :
+                              record.state.raw_value === 'rejected' ? 'border-danger' :
+                              record.state.raw_value === 'review' ? 'border-warning' : 'border-secondary'}">
+
+                                <!-- Header: Bid Index -->
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold text-uppercase">
+                                        <t t-esc="(record.bid_index and record.bid_index.value) or record.display_name.value"/>
+                                    </span>
+                                    <span t-if="record.state.raw_value === 'won'" class="badge bg-success">Won</span>
+                                    <span t-elif="record.state.raw_value === 'rejected'" class="badge bg-danger">Rejected</span>
+                                    <span t-elif="record.state.raw_value === 'review'" class="badge bg-warning text-dark">Review</span>
+                                    <span t-elif="record.state.raw_value === 'draft'" class="badge bg-secondary">Draft</span>
+                                </div>
+
+                                <!-- Vendor + RFQ -->
+                                <div class="mt-1 text-muted">
+                                    <i class="fa fa-user me-1"/>
+                                    <t t-esc="record.vendor_id.value"/>
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="fa fa-file me-1"/>
+                                    <t t-esc="record.rfq_id.value"/>
+                                </div>
+
+                                <!-- Date -->
+                                <div class="text-muted small mb-2">
+                                    <i class="fa fa-clock me-1"/>
+                                    <t t-esc="record.bid_date.value"/>
+                                </div>
+
+                                <!-- Amount -->
+                                <div class="fw-bold">
+                                    <i class="fa fa-money-bill me-1"/>
+                                    <field name="price_total" class="text-primary" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                                </div>
+
+                                <!-- Winner -->
+                                <div t-if="record.is_winner.raw_value" class="mt-1">
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fa fa-trophy me-1"/>
+                                    WINNER
+                                    </span>
+                                </div>
+
                             </div>
-                            <field name="state" widget="label_selection" options="{'classes': {'draft':'default','review':'warning','approved':'info','rejected':'danger','won':'success','lost':'danger'}}" class="ms-auto"/>
-                        </footer>
+                        </t>
+                        <t t-else="">
+                            <!-- Empty column placeholder -->
+                            <div class="text-center p-2 text-muted">
+                            No bids yet
+                            </div>
+                        </t>
                     </t>
                 </templates>
             </kanban>
         </field>
     </record>
+
 
     <!-- Dedicated form view for bids with tabs -->
     <record id="view_purchase_rfq_bid_form" model="ir.ui.view">
@@ -70,19 +118,19 @@
 
                 <header>
                     <!-- Statusbar -->
-                    <field name="state" widget="statusbar" statusbar_visible="draft,review,approved,rejected"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,review,rejected,won"/>
 
                     <!-- Submit Button (Bid Officer, Draft state) -->
                     <button name="action_submit_review" string="Submit for Review" type="object" class="btn-primary" invisible="state != 'draft'" confirm="Are you sure you want to submit this bid for review?"/>
 
                     <!-- Approve Button (Admin, Review state) -->
-                    <button name="action_approve" string="Approve" type="object" groups="purchase_rfq_multi_vendor.group_bid_admin" class="btn-success" invisible="state != 'review'" confirm="Are you sure you want to approve this bid?"/>
+                    <button name="action_approve" string="Approve and Set As Won" type="object" groups="purchase_rfq_multi_vendor.group_bid_admin" class="btn-success" invisible="state != 'review'" confirm="Are you sure you want to approve this bid?"/>
 
                     <!-- Reject Button (Admin, Review state) -->
                     <button name="action_reject" string="Reject" type="object" groups="purchase_rfq_multi_vendor.group_bid_admin" class="btn-danger" invisible="state != 'review'"/>
 
-                    <!-- Reset to Draft (Admin, Approved or Rejected states) -->
-                    <button name="action_reset_to_draft" string="Reset to Draft" type="object" groups="purchase_rfq_multi_vendor.group_bid_admin" class="btn-warning" invisible="state != 'approved' and state != 'rejected'" confirm="Are you sure you want to reset this bid to draft?"/>
+                    <!-- Reset to Draft (Admin, Rejected state) -->
+                    <button name="action_reset_to_draft" string="Reset to Draft" type="object" groups="purchase_rfq_multi_vendor.group_bid_admin" class="btn-warning" invisible="state != 'rejected'" confirm="Are you sure you want to reset this bid to draft?"/>
                 </header>
 
                 <sheet>
