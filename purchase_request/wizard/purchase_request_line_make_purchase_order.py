@@ -15,9 +15,11 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
 
     supplier_id = fields.Many2one(
         comodel_name="res.partner",
-        string="Supplier",
-        required=True,
+        string="Primary Supplier",
         context={"res_partner_search_mode": "supplier"},
+        help="Optional primary supplier used for payment terms and default descriptions.",
+        required=False,
+
     )
     vendor_ids = fields.Many2many(
         comodel_name="res.partner",
@@ -133,17 +135,30 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
         supplier_ids = request_lines.mapped("supplier_id").ids
         if len(supplier_ids) == 1:
             res["supplier_id"] = supplier_ids[0]
+        if supplier_ids:
+            res["vendor_ids"] = [(6, 0, supplier_ids)]
         return res
+
+    def _is_multi_vendor_enabled(self):
+        return "rfq_vendor_ids" in self.env["purchase.order"]._fields
+
+    def _get_primary_supplier(self):
+        return self.supplier_id or self.vendor_ids[:1]
+
+    def _apply_selected_vendors(self, purchase):
+        if not self.vendor_ids or not self._is_multi_vendor_enabled():
+            return
+        purchase.write({"rfq_vendor_ids": [(6, 0, self.vendor_ids.ids)]})
 
     @api.model
     def _prepare_purchase_order(self, picking_type, group_id, company, origin):
-        if not self.supplier_id:
-            raise UserError(_("Enter a supplier."))
-        supplier = self.supplier_id
+        supplier = self._get_primary_supplier()
+        if not supplier:
+            raise UserError(_("Select at least one supplier."))
         data = {
             "origin": origin,
-            "partner_id": self.supplier_id.id,
-            "payment_term_id": self.supplier_id.property_supplier_payment_term_id.id,
+            "partner_id": supplier.id,
+            "payment_term_id": supplier.property_supplier_payment_term_id.id,
             "fiscal_position_id": supplier.property_account_position_id
             and supplier.property_account_position_id.id
             or False,
@@ -151,6 +166,8 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
             "company_id": company.id,
             "group_id": group_id.id,
         }
+        if self.vendor_ids and self._is_multi_vendor_enabled():
+            data["rfq_vendor_ids"] = [(6, 0, self.vendor_ids.ids)]
         return data
 
     def create_allocation(self, po_line, pr_line, new_qty, alloc_uom):
@@ -194,9 +211,15 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
     @api.model
     def _get_purchase_line_name(self, order, line):
         """Fetch the product name as per supplier settings"""
+        supplier = self._get_primary_supplier()
+        lang_code = (
+            supplier.lang
+            if supplier and supplier.lang
+            else (self.env.user.lang or "en_US")
+        )
         product_lang = line.product_id.with_context(
-            lang=get_lang(self.env, self.supplier_id.lang).code,
-            partner_id=self.supplier_id.id,
+            lang=get_lang(self.env, lang_code).code,
+            partner_id=supplier.id if supplier else False,
             company_id=order.company_id.id,
         )
         name = product_lang.display_name
@@ -253,6 +276,7 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
                 raise UserError(_("Enter a positive quantity."))
             if self.purchase_order_id:
                 purchase = self.purchase_order_id
+                self._apply_selected_vendors(purchase)
             if not purchase:
                 po_data = self._prepare_purchase_order(
                     line.request_id.picking_type_id,
@@ -261,6 +285,7 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
                     line.origin,
                 )
                 purchase = purchase_obj.create(po_data)
+                self._apply_selected_vendors(purchase)
 
             # Look for any other PO line in the selected PO with same
             # product and UoM to sum quantities instead of creating a new
@@ -380,14 +405,15 @@ class PurchaseRequestLineMakePurchaseOrderItem(models.TransientModel):
             if not self.keep_description:
                 name = self.product_id.name
             code = self.product_id.code
-            sup_info_id = self.env["product.supplierinfo"].search(
-                [
-                    "|",
-                    ("product_id", "=", self.product_id.id),
-                    ("product_tmpl_id", "=", self.product_id.product_tmpl_id.id),
-                    ("partner_id", "=", self.wiz_id.supplier_id.id),
-                ]
-            )
+            partner = self.wiz_id._get_primary_supplier()
+            domain = [
+                "|",
+                ("product_id", "=", self.product_id.id),
+                ("product_tmpl_id", "=", self.product_id.product_tmpl_id.id),
+            ]
+            if partner:
+                domain.append(("partner_id", "=", partner.id))
+            sup_info_id = self.env["product.supplierinfo"].search(domain)
             if sup_info_id:
                 p_code = sup_info_id[0].product_code
                 p_name = sup_info_id[0].product_name
