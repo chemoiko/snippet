@@ -153,15 +153,19 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
     @api.model
     def _prepare_purchase_order(self, picking_type, group_id, company, origin):
         supplier = self._get_primary_supplier()
-        if not supplier:
-            raise UserError(_("Select at least one supplier."))
         data = {
             "origin": origin,
-            "partner_id": supplier.id,
-            "payment_term_id": supplier.property_supplier_payment_term_id.id,
-            "fiscal_position_id": supplier.property_account_position_id
-            and supplier.property_account_position_id.id
-            or False,
+            "partner_id": supplier.id if supplier else False,
+            "payment_term_id": (
+                supplier.property_supplier_payment_term_id.id
+                if supplier and supplier.property_supplier_payment_term_id
+                else False
+            ),
+            "fiscal_position_id": (
+                supplier.property_account_position_id.id
+                if supplier and supplier.property_account_position_id
+                else False
+            ),
             "picking_type_id": picking_type.id,
             "company_id": company.id,
             "group_id": group_id.id,
