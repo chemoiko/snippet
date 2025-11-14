@@ -19,6 +19,15 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
         required=True,
         context={"res_partner_search_mode": "supplier"},
     )
+    vendor_ids = fields.Many2many(
+        comodel_name="res.partner",
+        relation="purchase_request_make_po_vendor_rel",
+        column1="wizard_id",
+        column2="partner_id",
+        string="RFQ Vendors",
+        domain=[("supplier_rank", ">=", 0)],
+        context={"res_partner_search_mode": "supplier"},
+    )
     item_ids = fields.One2many(
         comodel_name="purchase.request.line.make.purchase.order.item",
         inverse_name="wiz_id",
@@ -67,7 +76,8 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
 
             line_company_id = line.company_id and line.company_id.id or False
             if company_id is not False and line_company_id != company_id:
-                raise UserError(_("You have to select lines from the same company."))
+                raise UserError(
+                    _("You have to select lines from the same company."))
             else:
                 company_id = line_company_id
 
@@ -112,12 +122,14 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
         elif active_model == "purchase.request":
             request_ids = self.env.context.get("active_ids", False)
             request_line_ids += (
-                self.env[active_model].browse(request_ids).mapped("line_ids.id")
+                self.env[active_model].browse(
+                    request_ids).mapped("line_ids.id")
             )
         if not request_line_ids:
             return res
         res["item_ids"] = self.get_items(request_line_ids)
-        request_lines = self.env["purchase.request.line"].browse(request_line_ids)
+        request_lines = self.env["purchase.request.line"].browse(
+            request_line_ids)
         supplier_ids = request_lines.mapped("supplier_id").ids
         if len(supplier_ids) == 1:
             res["supplier_id"] = supplier_ids[0]
@@ -204,7 +216,8 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
         ]
 
         if item.line_id.analytic_distribution:
-            analytic_account_ids = list(item.line_id.analytic_distribution.keys())
+            analytic_account_ids = list(
+                item.line_id.analytic_distribution.keys())
             order_line_data.append(
                 ("analytic_distribution", "in", analytic_account_ids)
             )
@@ -275,7 +288,8 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
                 all_qty = min(po_line_product_uom_qty, wizard_product_uom_qty)
                 self.create_allocation(po_line, line, all_qty, alloc_uom)
             else:
-                po_line_data = self._prepare_purchase_order_line(purchase, item)
+                po_line_data = self._prepare_purchase_order_line(
+                    purchase, item)
                 if item.keep_description:
                     po_line_data["name"] = item.name
                 po_line = po_line_obj.create(po_line_data)
@@ -299,7 +313,8 @@ class PurchaseRequestLineMakePurchaseOrder(models.TransientModel):
             # we enforce to save the datetime value in the current tz of the user
             po_line.date_planned = (
                 user_tz.localize(
-                    datetime(date_required.year, date_required.month, date_required.day)
+                    datetime(date_required.year,
+                             date_required.month, date_required.day)
                 )
                 .astimezone(pytz.utc)
                 .replace(tzinfo=None)
