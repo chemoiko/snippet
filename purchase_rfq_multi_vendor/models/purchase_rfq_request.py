@@ -94,6 +94,11 @@ class PurchaseRfqRequest(models.Model):
         string="PO Status",
         readonly=True,
     )
+    line_ids = fields.One2many(
+        "purchase.rfq.request.line",
+        "request_id",
+        string="Requested Products",
+    )
 
     def _compute_bid_count(self):
         for request in self:
@@ -139,3 +144,31 @@ class PurchaseRfqRequest(models.Model):
             "res_id": self.purchase_order_id.id,
             "target": "current",
         }
+
+
+class PurchaseRfqRequestLine(models.Model):
+    _name = "purchase.rfq.request.line"
+    _description = "RFQ Request Line"
+    _order = "sequence, id"
+
+    sequence = fields.Integer(default=10)
+    request_id = fields.Many2one(
+        "purchase.rfq.request",
+        string="RFQ Request",
+        required=True,
+        ondelete="cascade",
+    )
+    product_id = fields.Many2one(
+        "product.product",
+        string="Product",
+        domain=[("purchase_ok", "=", True)],
+    )
+    name = fields.Text(string="Description")
+    product_qty = fields.Float(string="Quantity", default=1.0)
+    product_uom_id = fields.Many2one(
+        "uom.uom",
+        string="Unit of Measure",
+        domain="[('category_id', '=', product_id.uom_id.category_id)]",
+    )
+    expected_date = fields.Date(string="Expected Date")
+    notes = fields.Text(string="Notes")

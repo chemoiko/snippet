@@ -8,6 +8,7 @@
         <field name="arch" type="xml">
             <list>
                 <field name="vendor_id"/>
+                <field name="rfq_request_id"/>
                 <field name="bid_date"/>
                 <field name="bid_deadline"/>
                 <field name="product_id"/>
@@ -28,7 +29,7 @@
                 <!-- Prefetch fields for the renderer -->
                 <field name="bid_index"/>
                 <field name="vendor_id"/>
-                <field name="rfq_id"/>
+                <field name="rfq_request_id"/>
                 <field name="bid_date"/>
                 <field name="currency_id"/>
                 <field name="price_total"/>
@@ -61,7 +62,7 @@
                                 </div>
                                 <div class="text-muted small">
                                     <i class="fa fa-file me-1"/>
-                                    <t t-esc="record.rfq_id.value"/>
+                                    <t t-esc="record.rfq_request_id.value"/>
                                 </div>
 
                                 <!-- Date -->
@@ -96,16 +97,6 @@
                 </templates>
             </kanban>
         </field>
-    </record>
-
-    <!-- Action used by the smart button; opens list view filtered to this RFQ -->
-    <record id="action_view_rfq_bids" model="ir.actions.act_window">
-        <field name="name">Bids</field>
-        <field name="res_model">purchase.rfq.bid</field>
-        <field name="view_mode">kanban,list,form</field>
-        <field name="view_id" ref="view_purchase_rfq_bid_kanban"/>
-        <field name="domain">[('rfq_id', '=', active_id)]</field>
-        <field name="context">{'default_rfq_id': active_id, 'group_by': 'state'}</field>
     </record>
 
     <!-- Dedicated form view for bids with tabs -->
@@ -143,8 +134,8 @@
                         <!-- Left Column -->
                         <group >
                             <field name="vendor_id"/>
-                            <field name="rfq_id" readonly="1"/>
-                            <field name="rfq_request_id" readonly="1"/>
+                            <field name="rfq_request_id"/>
+                            <field name="request_line_id"/>
                             <field name="bid_date" widget="datetime"/>
                             <field name="bid_deadline" widget="datetime"/>
                         </group>

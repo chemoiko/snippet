@@ -6,3 +6,5 @@ access_purchase_rfq_request_officer,RFQ Request Officer,model_purchase_rfq_reque
 access_purchase_rfq_request_admin,RFQ Request Admin,model_purchase_rfq_request,purchase_rfq_multi_vendor.group_bid_admin,1,1,1,1
 access_purchase_rfq_bid_line_officer,Bid Line Officer Access,model_purchase_rfq_bid_line,group_bid_officer,1,1,1,1
 access_purchase_rfq_bid_line_admin,Bid Line Admin Access,model_purchase_rfq_bid_line,group_bid_admin,1,1,1,1
+access_purchase_rfq_request_line_officer,RFQ Request Line Officer,model_purchase_rfq_request_line,purchase_rfq_multi_vendor.group_bid_officer,1,1,1,0
+access_purchase_rfq_request_line_admin,RFQ Request Line Admin,model_purchase_rfq_request_line,purchase_rfq_multi_vendor.group_bid_admin,1,1,1,1

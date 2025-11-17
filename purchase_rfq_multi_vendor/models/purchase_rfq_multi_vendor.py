@@ -39,6 +39,12 @@ class PurchaseOrder(models.Model):
         for order in self:
             order.bid_count = len(order.bid_ids)
 
+    def action_view_rfq_request_bids(self):
+        self.ensure_one()
+        if not self.rfq_request_id:
+            return False
+        return self.rfq_request_id.action_view_bids()
+
     def button_confirm(self):
         # Ensure we have a primary vendor before confirming
         for order in self:
@@ -109,15 +115,20 @@ class PurchaseRfqBid(models.Model):
         string="Bid Index", compute="_compute_bid_index", store=False
     )
 
-    rfq_id = fields.Many2one(
-        "purchase.order", string="RFQ", required=True, ondelete="cascade"
-    )
     rfq_request_id = fields.Many2one(
         "purchase.rfq.request",
         string="RFQ Request",
-        ondelete="set null",
+        required=True,
+        ondelete="cascade",
         copy=False,
         index=True,
+    )
+    rfq_id = fields.Many2one(
+        "purchase.order",
+        string="Purchase Order",
+        related="rfq_request_id.purchase_order_id",
+        store=True,
+        readonly=True,
     )
     vendor_id = fields.Many2one(
         "res.partner",
@@ -131,7 +142,7 @@ class PurchaseRfqBid(models.Model):
     company_id = fields.Many2one(
         "res.company",
         string="Company",
-        related="rfq_id.company_id",
+        related="rfq_request_id.company_id",
         store=True,
         readonly=True,
     )
@@ -146,22 +157,17 @@ class PurchaseRfqBid(models.Model):
         string="Bid Lines",
     )
 
-    rfq_line_id = fields.Many2one(
-        "purchase.order.line", string="RFQ Line", domain="[('order_id', '=', rfq_id)]"
+    request_line_id = fields.Many2one(
+        "purchase.rfq.request.line",
+        string="Request Line",
+        domain="[('request_id', '=', rfq_request_id)]",
     )
     product_id = fields.Many2one(
         "product.product",
         string="Product",
-        related="rfq_line_id.product_id",
-        store=True,
-        readonly=True,
+        domain=[("purchase_ok", "=", True)],
     )
-    product_description = fields.Text(
-        string="Description",
-        related="rfq_line_id.name",
-        store=True,
-        readonly=True,
-    )
+    product_description = fields.Text(string="Description")
     product_qty = fields.Float(string="Quantity", default=1.0)
     price_total = fields.Monetary(
         string="Offer",
@@ -201,11 +207,17 @@ class PurchaseRfqBid(models.Model):
 
     _sql_constraints = [
         (
-            "uniq_rfq_vendor",
-            "unique(rfq_id, vendor_id)",
+            "uniq_request_vendor",
+            "unique(rfq_request_id, vendor_id)",
             "This vendor already has a bid on this RFQ.",
-        )
+        ),
     ]
+
+    @api.constrains("rfq_request_id")
+    def _check_rfq_request_id(self):
+        for bid in self:
+            if not bid.rfq_request_id:
+                raise ValidationError("Bids must be linked to an RFQ request.")
 
     @api.depends("state")
     def _compute_is_winner(self):
@@ -223,25 +235,35 @@ class PurchaseRfqBid(models.Model):
                 sum(bid.line_ids.mapped("price_total")) if bid.line_ids else 0.0
             )
 
+    @api.onchange("request_line_id")
+    def _onchange_request_line_id(self):
+        if self.request_line_id:
+            self.product_id = self.request_line_id.product_id
+            self.product_description = self.request_line_id.name
+            self.product_qty = self.request_line_id.product_qty
+
     def _apply_won_side_effects(self):
         # Apply side-effects of a bid being marked as won without rewriting state again
         for bid in self:
-            if not bid.rfq_id:
+            target_request = bid.rfq_request_id
+            if not target_request:
                 continue
-            other_bids = bid.rfq_id.bid_ids.filtered(lambda b: b.id != bid.id)
+
+            other_bids = target_request.bid_ids.filtered(lambda b: b.id != bid.id)
             if other_bids:
                 # When one bid wins/approved, others are rejected
                 other_bids.write({"state": "rejected"})
-            # Add vendor to RFQ vendors if not already present
-            if bid.vendor_id not in bid.rfq_id.rfq_vendor_ids:
-                bid.rfq_id.rfq_vendor_ids = [(4, bid.vendor_id.id)]
-            # Set the winning vendor as the primary vendor
-            bid.rfq_id.partner_id = bid.vendor_id.id
+
+            if bid.vendor_id:
+                if bid.vendor_id not in target_request.rfq_vendor_ids:
+                    target_request.rfq_vendor_ids = [(4, bid.vendor_id.id)]
+                target_request.primary_vendor_id = bid.vendor_id
+                target_request.winning_bid_id = bid.id
 
     def action_set_won(self):
         # Approve selected bid(s) and show toast notification
         for bid in self:
-            if not bid.rfq_id:
+            if not bid.rfq_request_id:
                 continue
             if bid.state != "won":
                 bid.with_context(skip_won_hook=True).write({"state": "won"})
@@ -251,7 +273,7 @@ class PurchaseRfqBid(models.Model):
         if len(self) == 1:
             bid = self[0]
             vendor_name = bid.vendor_id.display_name or "Vendor"
-            rfq_name = bid.rfq_id.name or "RFQ"
+            rfq_name = bid.rfq_request_id.rfq_index or bid.rfq_request_id.name or "RFQ"
             message = f"{vendor_name} selected as winner for {rfq_name}."
         else:
             message = "Selected bid(s) approved as winner."
