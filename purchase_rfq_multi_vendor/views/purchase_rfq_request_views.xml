@@ -24,6 +24,7 @@
             <field name="arch" type="xml">
                 <form string="RFQ Request">
                     <header>
+                        <button name="action_generate_purchase_order" type="object" string="Create Purchase Order" class="btn-primary" invisible="purchase_order_id or not winning_bid_id"/>
                         <field name="state" widget="statusbar" statusbar_visible="draft,review,awarded,po_created"/>
                     </header>
                     <sheet>
@@ -36,8 +37,11 @@
                             <button class="oe_stat_button" type="object" name="action_view_bids" string="Bids">
                                 <field name="bid_count" widget="statinfo"/>
                             </button>
-                            <button class="oe_stat_button" type="object" name="action_open_related_po" invisible="not purchase_order_id">
-                                <field name="purchase_order_id" string="Purchase Order"/>
+                            <button class="oe_stat_button" type="object" name="action_open_related_po" icon="fa-shopping-cart" invisible="not purchase_order_id">
+                                <span class="o_stat_value">
+                                    <field name="purchase_order_id" readonly="1" nolabel="1"/>
+                                </span>
+                                <span class="o_stat_text">Purchase Order</span>
                             </button>
                         </div>
                         <group>

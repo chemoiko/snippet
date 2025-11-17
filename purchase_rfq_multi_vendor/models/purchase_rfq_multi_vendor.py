@@ -242,6 +242,23 @@ class PurchaseRfqBid(models.Model):
             self.product_description = self.request_line_id.name
             self.product_qty = self.request_line_id.product_qty
 
+    def _get_price_for_request_line(self, request_line):
+        self.ensure_one()
+        if not request_line:
+            return 0.0
+        candidate = False
+        if request_line.product_id:
+            candidate = self.line_ids.filtered(
+                lambda l: l.product_id == request_line.product_id
+            )[:1]
+        if not candidate and request_line.name:
+            candidate = self.line_ids.filtered(
+                lambda l: (l.name or "").strip() == (request_line.name or "").strip()
+            )[:1]
+        if candidate:
+            return candidate.price_unit or candidate.price_total
+        return self.price_unit or 0.0
+
     def _apply_won_side_effects(self):
         # Apply side-effects of a bid being marked as won without rewriting state again
         for bid in self:
@@ -259,6 +276,8 @@ class PurchaseRfqBid(models.Model):
                     target_request.rfq_vendor_ids = [(4, bid.vendor_id.id)]
                 target_request.primary_vendor_id = bid.vendor_id
                 target_request.winning_bid_id = bid.id
+                target_request.state = "awarded"
+                target_request._ensure_purchase_order(bid)
 
     def action_set_won(self):
         # Approve selected bid(s) and show toast notification

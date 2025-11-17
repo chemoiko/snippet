@@ -1,4 +1,5 @@
 from odoo import _, api, fields, models  # pyright: ignore[reportMissingImports]
+from odoo.exceptions import ValidationError  # pyright: ignore[reportMissingImports]
 
 
 class PurchaseRfqRequest(models.Model):
@@ -145,6 +146,93 @@ class PurchaseRfqRequest(models.Model):
             "res_id": self.purchase_order_id.id,
             "target": "current",
         }
+
+    def action_generate_purchase_order(self):
+        for request in self:
+            request._ensure_purchase_order()
+        return True
+
+    def _ensure_purchase_order(self, winning_bid=None):
+        self.ensure_one()
+        winning_bid = winning_bid or self.winning_bid_id
+        partner = winning_bid.vendor_id if winning_bid else self.primary_vendor_id
+        if not partner:
+            raise ValidationError(
+                _("Select a winning vendor before generating a purchase order.")
+            )
+
+        if self.purchase_order_id:
+            if partner and self.purchase_order_id.partner_id != partner:
+                self.purchase_order_id.partner_id = partner.id
+            return self.purchase_order_id
+
+        order_vals = self._prepare_purchase_order_vals(partner, winning_bid)
+        purchase_order = self.env["purchase.order"].create(order_vals)
+        self.purchase_order_id = purchase_order
+        self.state = "po_created"
+        purchase_order.message_post(
+            body=_("Purchase order created from RFQ %s") % (self.rfq_index or self.name)
+        )
+        return purchase_order
+
+    def _prepare_purchase_order_vals(self, partner, winning_bid=None):
+        self.ensure_one()
+        order_lines = self._prepare_purchase_order_line_vals(winning_bid)
+        if not order_lines:
+            raise ValidationError(_("Add at least one product line to the RFQ."))
+
+        return {
+            "partner_id": partner.id,
+            "company_id": self.company_id.id,
+            "currency_id": self.currency_id.id,
+            "origin": self.rfq_index or self.name,
+            "rfq_request_id": self.id,
+            "order_line": order_lines,
+        }
+
+    def _prepare_purchase_order_line_vals(self, winning_bid=None):
+        self.ensure_one()
+        lines = []
+        if self.line_ids:
+            for line in self.line_ids:
+                product = line.product_id
+                description = line.name or (product and product.display_name) or ""
+                uom = line.product_uom_id or (
+                    product and (product.uom_po_id or product.uom_id)
+                )
+                qty = line.product_qty or 1.0
+                price = (
+                    winning_bid._get_price_for_request_line(line)
+                    if winning_bid
+                    else 0.0
+                )
+                date_planned = line.expected_date or fields.Date.context_today(self)
+
+                line_vals = {
+                    "name": description,
+                    "product_id": product.id if product else False,
+                    "product_qty": qty,
+                    "product_uom": uom.id if uom else False,
+                    "price_unit": price,
+                    "date_planned": date_planned,
+                }
+                lines.append((0, 0, line_vals))
+        elif winning_bid and winning_bid.line_ids:
+            for bid_line in winning_bid.line_ids:
+                product = bid_line.product_id
+                description = bid_line.name or (product and product.display_name) or ""
+                uom = product.uom_po_id if product else False
+                line_vals = {
+                    "name": description,
+                    "product_id": product.id if product else False,
+                    "product_qty": bid_line.product_qty or 1.0,
+                    "product_uom": uom.id if uom else False,
+                    "price_unit": bid_line.price_unit or 0.0,
+                    "date_planned": bid_line.date_expected
+                    or fields.Date.context_today(self),
+                }
+                lines.append((0, 0, line_vals))
+        return lines
 
 
 class PurchaseRfqRequestLine(models.Model):
