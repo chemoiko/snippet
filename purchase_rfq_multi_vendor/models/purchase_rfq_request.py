@@ -15,9 +15,9 @@ class PurchaseRfqRequest(models.Model):
         required=True,
     )
     rfq_index = fields.Char(
-        string="RFQ Number",
+        string="Reference",
         compute="_compute_rfq_index",
-        store=False,
+        store=True,
     )
     active = fields.Boolean(default=True)
     company_id = fields.Many2one(
@@ -104,9 +104,10 @@ class PurchaseRfqRequest(models.Model):
         for request in self:
             request.bid_count = len(request.bid_ids)
 
+    @api.depends("name")
     def _compute_rfq_index(self):
         for request in self:
-            request.rfq_index = f"RFQ{request.id:04d}" if request.id else _("RFQ")
+            request.rfq_index = request.name or _("RFQ")
 
     @api.model_create_multi
     def create(self, vals_list):
