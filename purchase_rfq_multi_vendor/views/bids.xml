@@ -144,6 +144,7 @@
                         <group >
                             <field name="vendor_id"/>
                             <field name="rfq_id" readonly="1"/>
+                            <field name="rfq_request_id" readonly="1"/>
                             <field name="bid_date" widget="datetime"/>
                             <field name="bid_deadline" widget="datetime"/>
                         </group>

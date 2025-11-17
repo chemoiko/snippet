@@ -17,6 +17,12 @@ class PurchaseOrder(models.Model):
         help="You can find a vendor by its Name, TIN, Email or Internal Reference.",
     )
 
+    rfq_request_id = fields.Many2one(
+        "purchase.rfq.request",
+        string="RFQ Request",
+        copy=False,
+        ondelete="set null",
+    )
     rfq_vendor_ids = fields.Many2many(
         "res.partner",
         "purchase_rfq_vendor_rel",
@@ -105,6 +111,13 @@ class PurchaseRfqBid(models.Model):
 
     rfq_id = fields.Many2one(
         "purchase.order", string="RFQ", required=True, ondelete="cascade"
+    )
+    rfq_request_id = fields.Many2one(
+        "purchase.rfq.request",
+        string="RFQ Request",
+        ondelete="set null",
+        copy=False,
+        index=True,
     )
     vendor_id = fields.Many2one(
         "res.partner",
