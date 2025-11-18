@@ -147,6 +147,21 @@ class PurchaseRfqRequest(models.Model):
             "target": "current",
         }
 
+    def action_open_winning_bid(self):
+        self.ensure_one()
+        winning_bid = self.winning_bid_id
+        if not winning_bid:
+            return self.action_view_bids()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Winning Bid"),
+            "res_model": "purchase.rfq.bid",
+            "view_mode": "form",
+            "res_id": winning_bid.id,
+            "target": "current",
+            "context": {"default_rfq_request_id": self.id},
+        }
+
     def action_generate_purchase_order(self):
         for request in self:
             request._ensure_purchase_order()
